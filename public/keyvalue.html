@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Sample Web Services</title>
+<link rel="stylesheet" href="bundle/bootstrap-4.1.3-dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="../bundle/neo-3.51.0/css/neo.min.css">
+<script src="bundle/jquery-3.5.1/jquery.min.js" type="text/javascript"></script>
+<script src="bundle/bootstrap-4.1.3-dist/js/bootstrap.min.js" type="text/javascript"></script>
+<style>
+form {margin-top:5px;margin-bottom:30px;}
+</style>
+</head>
+<body>
+<div style="float:left;margin:50px;width:550px;">
+<p>（１）｛検索キー（key）: 値（value）｝の組み合わせのレコードを保存します。</p>
+<form class="neo-form" onsubmit="return false;">
+  <div class="neo-form-control">
+    <div class="neo-input-group">
+      <label for="keyToPost" aria-label="">
+        http://<span class="SERVER_DOMAIN"></span>:<span class="PORT"></span>/postKeyValue
+      </label>
+      <div class="neo-input-editable__wrapper">
+        <input id="keyToPost" class="neo-input" placeholder="保存する検索キーを入力" type="text"></input>
+        <button aria-label="clear input" tabIndex="-1" class="neo-input-edit__icon neo-icon-end" onclick="$('#keyToPost').val('');return false;"></button>
+      </div>
+    </div>
+    <div class="neo-input-group" style="margin-top:5px;">
+      <div class="neo-input-editable__wrapper">
+        <input id="valueToPost" class="neo-input" placeholder="保存する値を入力" type="text"></input>
+        <button aria-label="clear input" tabIndex="-1" class="neo-input-edit__icon neo-icon-end" onclick="$('#valueToPost').val('');return false;"></button>
+      </div>
+    </div>
+  </div>
+  <div class="neo-form-control">
+     <button id="postKeyValue" class="neo-btn neo-btn-primary neo-btn-primary--default">POST</button>
+  </div>
+</form>
+
+<p>（２）検索キー（key）で、値（value）が取得できます。</p>
+<form class="neo-form" onsubmit="return false;">
+  <div class="neo-form-control">
+    <div class="neo-input-group">
+      <label for="queryKey" aria-label="">
+        http://<span class="SERVER_DOMAIN"></span>:<span class="PORT"></span>/getValueByKey?key=(検索キー)
+      </label>
+      <div class="neo-input-editable__wrapper">
+        <input id="queryKey" class="neo-input" placeholder="検索キーを入力" type="text"></input>
+        <button aria-label="clear input" tabIndex="-1" class="neo-input-edit__icon neo-icon-end" onclick="$('#queryKey').val('');return false;"></button>
+      </div>
+    </div>
+    <div class="neo-input-group" style="margin-top:5px;">
+      <div class="neo-input-editable__wrapper">
+        <input id="retrievedValue" class="neo-input" placeholder="（ここに検索された値が表示されます）" type="text"></input>
+        <button aria-label="clear input" tabIndex="-1" class="neo-input-edit__icon neo-icon-end" onclick="$('#retrievedValue').val('');return false;"></button>
+      </div>
+    </div>
+  </div>
+  <div class="neo-form-control">
+     <button id="getValueByKey" class="neo-btn neo-btn-primary neo-btn-primary--default">GET</button>
+  </div>
+</form>
+</div>
+
+<div style="float:left;margin:50px;width:550px;">
+<form class="neo-form" onsubmit="return false;">
+  <div class="neo-form-control">
+  	<nav class="neo-navbar">
+      <div class="neo-nav--left">
+        <button id="getRecords" class="neo-btn neo-btn-primary neo-btn-primary--default">Get Records</button>
+      </div>
+	  <div>
+        <button id="updateRecords" class="neo-btn neo-btn-primary neo-btn-primary--default">Update Records</button>
+        <button id="deleteRecords" class="neo-btn neo-btn-primary neo-btn-primary--warning">Delete Records</button>
+      </div>
+	</nav>
+  </div>
+  <div class="neo-form-control">
+    <div class="neo-input-group">
+      <textarea id="records" class="neo-input" rows="30" placeholder="Records" aria-describedby="textarea-hint textarea-counter"></textarea>
+    </div>
+    <div class="neo-input-textarea__helper">
+      <div class="neo-input-hint" id="textarea-hint">Number of records</div>
+      <div id="number-of-records" class="neo-input-textarea__counter" id="textarea-counter"></div>
+    </div>
+  </div>
+</form>
+</div>
+
+<script>
+
+const Base64 = {encode:function(str){return btoa(unescape(encodeURIComponent(str)));},decode:function(str){return decodeURIComponent(escape(atob(str)));}};
+
+$("#postKeyValue").click((e) => {
+	if ($("#keyToPost").val() === '') {
+	  return;
+	}
+	$.post("/postKeyValue", {
+		data:Base64.encode(`{"key":"${$('#keyToPost').val()}","value":"${$('#valueToPost').val()}"}`)
+	}, (result, status) => {
+		const records = JSON.parse(Base64.decode(result));
+		$("#records").val(`${JSON.stringify(records)}`);
+		$("#number-of-records").text(records.length);
+		console.log(`/postKeyValue ${result} ${status}`);
+	}).fail((error) => {
+		console.error(`/postKeyValue ${error}`);
+	});
+	$("#keyToPost").val("");
+	$("#valueToPost").val("");
+});
+
+$("#getValueByKey").click((e) => {
+	if ($("#queryKey").val() === '') {
+	  return;
+	}
+	//$.get(`/getValueByKey?key=${Base64.encode($('#queryKey').val())}`, (data, status) => {
+	$.get(encodeURI(`/getValueByKey?key=${$('#queryKey').val()}`), (data, status) => {
+		const record = JSON.parse(Base64.decode(data));
+		if (record) {
+		  $("#retrievedValue").val(JSON.stringify(record));
+		}
+		console.log(`/getValueByKey ${status}`);
+	}).fail((error) => {
+		console.error(`/getValueByKey ${error}`);
+	});
+	$("#queryKey").val("");
+	$("#retrievedValue").val("");
+});
+
+$("#getRecords").click((e) => {
+	$.get(`/getRecords`, (data, status) => {
+		const records = JSON.parse(Base64.decode(data));
+		$("#records").val(`${JSON.stringify(records)}`);
+		$("#number-of-records").text(records.length);
+		console.log(`/getRecords ${status}`);
+	}).fail((error) => {
+		console.error(`/getRecords ${error}`);
+	});
+});
+
+$("#updateRecords").click((e) => {
+	if ($("#records").val() === '') {
+	  return;
+	}
+	$.post("/updateRecords", {
+		data:Base64.encode($('#records').val())
+	}, (result, status) => {
+		console.log(`/updateRecords ${result} ${status}`);
+	}).fail((error) => {
+		console.error(`/updateRecords ${error}`);
+	});
+});
+
+$("#deleteRecords").click((e) => {
+	$.get(`/deleteRecords`, (data, status) => {
+		$("#records").val('');
+		$("#number-of-records").text(0);
+		console.log(`/deleteRecords ${status}`);
+	}).fail((error) => {
+		console.error(`/deleteRecords ${error}`);
+	});
+});
+
+window.onload = () => {
+	var uri = new URL(window.location.href);
+	$(".SERVER_DOMAIN").text(uri.hostname);
+	$(".PORT").text(uri.port);
+}
+
+</script>
+
+</body>
+</html>
