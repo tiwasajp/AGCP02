@@ -18,7 +18,7 @@ module.exports = app;
 
 http.createServer(app).listen(PORT, () => {console.log(`Server listening on port ${PORT}`);});
 
-// for health check
+// health check for instance group/container
 app.get('/', (req, resp) => {
   //console.log(`/ health check ${req.query}`);
   return resp.sendStatus(200);
@@ -27,7 +27,7 @@ app.get('/', (req, resp) => {
 var texts = [];
 
 app.post("/postText", (req, resp) => {
-  var text = (new Buffer.from(req.body.data, "base64")).toString();
+  const text = (new Buffer.from(req.body.data, "base64")).toString();
   texts.push(text);
   resp.send((new Buffer.from(JSON.stringify(texts))).toString("base64")).end();
   console.log(`/postText ${text}`);
@@ -82,29 +82,31 @@ app.get("/deleteTexts", (req, resp) => {
 var records = [];
 
 app.post("/postKeyValue", (req, resp) => {
-  var data = JSON.parse((new Buffer.from(req.body.data, "base64")).toString());
-  var recordsFiltered = records.filter((record) => {
-	return record.key !== data.key;
+  const data = JSON.parse((new Buffer.from(req.body.data, "base64")).toString());
+  var filtered = records.filter((record) => {
+	return record.key == data.key;
   });
-  records = recordsFiltered;
-  records.push(data);
+  records.push({key:data.key, value:data.value, attr:{idx:(filtered.length + 1), date:(new Date()), valid:true}});
   resp.send((new Buffer.from(JSON.stringify(records))).toString("base64")).end();  
   console.log(`/postKeyValue ${JSON.stringify(data)}`);
   console.table(records);
 });
 
 app.get("/getValueByKey", (req, resp) => {
-  var key = decodeURI(req.query.key);
-  var recordsFiltered = records.filter((record) => {
+  const key = decodeURI(req.query.key);
+  var filtered = records.filter((record) => {
 	return record.key == key;
   });
-  if (recordsFiltered.length !== 0) {
-  	resp.send((new Buffer.from(JSON.stringify(recordsFiltered[0]))).toString("base64")).end();
+  filtered.sort((first, second) => {
+  	return second.attr.idx - first.attr.idx;
+  });
+  if (filtered.length !== 0) {
+  	resp.send((new Buffer.from(JSON.stringify(filtered))).toString("base64")).end();
   }
   else {
     resp.send((new Buffer.from(JSON.stringify({key:key,value:""}))).toString("base64")).end();
   }
-  console.log(`/getValueByKey success ${key} ${JSON.stringify(recordsFiltered)}`);
+  console.log(`/getValueByKey success ${JSON.stringify(filtered)}`);
   console.table(records);
 });
 
@@ -127,3 +129,26 @@ app.get("/deleteRecords", (req, resp) => {
   console.log(`/deleteRecords success}`);
   console.table(records);
 });
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+//　GCPのNoSQL（Unstructuredのレコードのデータベース）にアクセスするためのAPI
+const admin = require('firebase-admin');
+admin.initializeApp();
+ 
+app.get("/getValueByKeyFromFirestore", (req, resp) => {
+  const key = decodeURI(req.query.key);
+  const db = admin.firestore();
+  db.collection('weather').get().then((snapshot) => {
+	snapshot.forEach((doc) => {
+	  if (doc.id === key) {
+		console.log(`${doc.id} => ${doc.data().today}`);
+		resp.send((new Buffer.from(JSON.stringify([{key:key,value:doc.data().today}]))).toString("base64")).end();
+      }
+	});
+  }).catch((error) => {
+    console.log("Error getting documents", error);
+    resp.send((new Buffer.from("エラー")).toString("base64")).end();
+  })
+});
+ 

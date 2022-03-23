@@ -18,7 +18,7 @@ form {margin-top:5px;margin-bottom:30px;}
   <div class="neo-form-control">
     <div class="neo-input-group">
       <label for="keyToPost" aria-label="">
-        http://<span class="SERVER_DOMAIN"></span>:<span class="PORT"></span>/postKeyValue
+        http(s)://<span class="SERVER_DOMAIN"></span>:<span class="PORT"></span>/postKeyValue
       </label>
       <div class="neo-input-editable__wrapper">
         <input id="keyToPost" class="neo-input" placeholder="保存する検索キーを入力" type="text"></input>
@@ -42,7 +42,7 @@ form {margin-top:5px;margin-bottom:30px;}
   <div class="neo-form-control">
     <div class="neo-input-group">
       <label for="queryKey" aria-label="">
-        http://<span class="SERVER_DOMAIN"></span>:<span class="PORT"></span>/getValueByKey?key=(検索キー)
+        http(s)://<span class="SERVER_DOMAIN"></span>:<span class="PORT"></span>/getValueByKey?key=(検索キー)
       </label>
       <div class="neo-input-editable__wrapper">
         <input id="queryKey" class="neo-input" placeholder="検索キーを入力" type="text"></input>
@@ -51,8 +51,7 @@ form {margin-top:5px;margin-bottom:30px;}
     </div>
     <div class="neo-input-group" style="margin-top:5px;">
       <div class="neo-input-editable__wrapper">
-        <input id="retrievedValue" class="neo-input" placeholder="（ここに検索された値が表示されます）" type="text"></input>
-        <button aria-label="clear input" tabIndex="-1" class="neo-input-edit__icon neo-icon-end" onclick="$('#retrievedValue').val('');return false;"></button>
+        <textarea id="retrievedValue" class="neo-input" rows="10" placeholder="ここに検索された値が表示されます）" aria-describedby="textarea-hint textarea-counter"></textarea>
       </div>
     </div>
   </div>
@@ -113,7 +112,6 @@ $("#getValueByKey").click((e) => {
 	if ($("#queryKey").val() === '') {
 	  return;
 	}
-	//$.get(`/getValueByKey?key=${Base64.encode($('#queryKey').val())}`, (data, status) => {
 	$.get(encodeURI(`/getValueByKey?key=${$('#queryKey').val()}`), (data, status) => {
 		const record = JSON.parse(Base64.decode(data));
 		if (record) {
